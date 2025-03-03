@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>쿠키런 킹덤 뽑기</title>
+  <style>
+    /* 전역 리셋 및 기본 스타일 */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background-color: #fff;
+      padding: 20px;
+      color: #333;
+      min-height: 100vh;
+    }
+    h1 { margin-bottom: 20px; }
+    /* 상단 뽑기 영역 */
+    .container {
+      width: 480px;
+      margin: 0 auto 40px;
+      text-align: center;
+    }
+    .diamond-info {
+      margin-bottom: 10px;
+      font-size: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+    }
+    .diamond-icon { width: 24px; height: 24px; object-fit: contain; }
+    /* 초기화 및 확률 보기 버튼 */
+    .top-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .top-buttons button {
+      width: 48%;
+      background-color: #6c757d;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      padding: 10px 0;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .top-buttons button:hover { background-color: #5a6268; transform: translateY(-2px); }
+    .top-buttons button:active { transform: translateY(0); }
+    /* 뽑기 버튼 영역 */
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .button-container button {
+      width: 45%;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      padding: 12px 0;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .button-container button:hover { background-color: #0069d9; transform: translateY(-2px); }
+    .button-container button:active { transform: translateY(0); }
+    /* 뽑기 결과 영역 (2열 그리드) */
+    .results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      justify-items: center;
+    }
+    .result-item {
+      width: 90%;
+      aspect-ratio: 1/1;
+      border: 3px solid #ccc;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-around;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 10px;
+    }
+    .item-image { max-width: 80%; max-height: 50%; object-fit: contain; }
+    .item-name { font-weight: bold; text-align: center; font-size: 1.1em; }
+    .item-grade { width: 80px; height: 80px; object-fit: contain; }
+    /* 조각(영혼석) 관련 */
+    .fragment-image { max-width: 80%; max-height: 50%; object-fit: contain; margin-bottom: 8px; }
+    .fragment-text { font-size: 1.1em; text-align: center; font-weight: bold; }
+    .fragment-qty { font-size: 0.95em; margin-top: 5px; color: #555; }
+    /* 확률 보기 팝업 (가로 확장) */
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background-color: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .popup-overlay.show { display: flex; }
+    .popup-content {
+      background-color: #fff;
+      width: 600px;
+      border-radius: 8px;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    .popup-close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 28px; height: 28px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .prob-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+    .prob-item {
+      min-width: 100px;
+      padding: 8px;
+      background-color: #f1f1f1;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    /* 에픽 이상 쿠키 팝업 */
+    .epic-popup-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background-color: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .epic-popup-overlay.show { display: flex; }
+    .epic-popup-content {
+      background-color: #fff;
+      width: 300px;
+      border-radius: 8px;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+      position: relative;
+    }
+    .epic-popup-close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 28px; height: 28px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .epic-cookie-img { max-width: 80%; height: auto; margin-bottom: 15px; }
+    .epic-cookie-name { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; }
+    .epic-diamond-text { margin-top: 10px; font-size: 0.95em; color: #555; }
+    /* 하단 내 쿠키 영역 */
+    .cookie-section {
+      margin-bottom: 30px;
+      padding: 10px 0;
+    }
+    .section-header {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #fff;
+      padding: 8px 16px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    /* 하단 영역 순서: beast, ancient, dragon, legendary */
+    .beast .section-header { background: linear-gradient(to right, #7f0000, #ff0000); }
+    .ancient .section-header { background: linear-gradient(to right, #8e44ad, #9b59b6); }
+    .dragon .section-header { background: linear-gradient(to right, #c0392b, #e74c3c); }
+    .legendary .section-header { background: linear-gradient(to right, #2980b9, #3498db); }
+    .cookie-list {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 0 10px;
+    }
+    .cookie-box {
+      width: 90px;
+      text-align: center;
+    }
+    .cookie-icon {
+      width: 90px;
+      height: 90px;
+      border-radius: 8px;
+      object-fit: cover;
+      background-color: #eee;
+      margin-bottom: 5px;
+    }
+    .cookie-name { font-size: 0.9em; margin-bottom: 4px; }
+    .shard-info { font-size: 0.8em; color: #666; margin-bottom: 4px; }
+    .star-info { font-size: 1em; color: #f39c12; }
+    .star-info.red { color: red; }
+    /* 반응형 (폰) */
+    @media (max-width: 600px) {
+      .container { width: 100%; padding: 0 10px; margin-bottom: 30px; }
+      .results { grid-template-columns: 1fr; }
+      .popup-content { width: 90%; }
+      .cookie-list { overflow-x: auto; flex-wrap: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <!-- (1) 상단 뽑기 영역 -->
+  <div class="container">
+    <h1>쿠키런 킹덤 뽑기</h1>
+    <!-- 다이아 표시 -->
+    <div class="diamond-info">
+      <span>사용한 다이아:</span>
+      <img src="images/diamond.png" alt="다이아" class="diamond-icon" />
+      <span id="diamondCount">0</span>
+    </div>
+    <!-- 초기화 & 확률 보기 버튼 -->
+    <div class="top-buttons">
+      <button id="resetDiamonds">초기화</button>
+      <button id="showProbBtn">확률 보기</button>
+    </div>
+    <!-- 뽑기 버튼 영역 -->
+    <div class="button-container">
+      <button id="drawOnce">1회 뽑기</button>
+      <button id="drawTen">10회 뽑기</button>
+    </div>
+    <!-- 뽑기 결과 영역 -->
+    <div class="results" id="results"></div>
+  </div>
+
+  <!-- (2) 하단 내 쿠키 영역 (순서: beast, ancient, dragon, legendary) -->
+  <div id="myCookiesArea">
+    <div class="cookie-section beast">
+      <div class="section-header">비스트 쿠키 (Beast)</div>
+      <div class="cookie-list" id="beastList"></div>
+    </div>
+    <div class="cookie-section ancient">
+      <div class="section-header">에인션트 쿠키 (Ancient)</div>
+      <div class="cookie-list" id="ancientList"></div>
+    </div>
+    <div class="cookie-section dragon">
+      <div class="section-header">용 쿠키 (Dragon)</div>
+      <div class="cookie-list" id="dragonList"></div>
+    </div>
+    <div class="cookie-section legendary">
+      <div class="section-header">전설 쿠키 (Legendary)</div>
+      <div class="cookie-list" id="legendaryList"></div>
+    </div>
+  </div>
+
+  <!-- (3) 확률 보기 팝업 -->
+  <div id="probPopup" class="popup-overlay">
+    <div class="popup-content">
+      <button class="popup-close" id="probCloseBtn">×</button>
+      <h2>등급별 상세 확률</h2>
+      <div class="prob-row">
+        <div class="prob-item">beast: 0.0247%</div>
+        <div class="prob-item">ancient: 0.06204%</div>
+        <div class="prob-item">legendary: 0.0472%</div>
+        <div class="prob-item">dragon: 0.0472%</div>
+        <div class="prob-item">super epic: 0.0360%</div>
+        <div class="prob-item">epic: 0.0304%</div>
+        <div class="prob-item">rare: 0.3722%</div>
+        <div class="prob-item">common: 1.2825%</div>
+        <div class="prob-item">커먼 조각: 4.2251%</div>
+        <div class="prob-item">레어 조각: 2.2658%</div>
+        <div class="prob-item">에픽 조각: 0.1592%</div>
+        <div class="prob-item">슈퍼 에픽 조각: 0.0360%</div>
+        <div class="prob-item">드래곤 조각: 0.2698%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- (4) 에픽 이상 쿠키 팝업은 동적으로 생성됨 -->
+
+  <script>
+    /***********************************************
+     * 1. 데이터 복원: 등급별 확률, 쿠키, 조각 데이터
+     ***********************************************/
+     const gradeProbabilities = {
+      beast: 0.024733333333333333,
+      ancient: 0.06204,
+      legendary: 0.0472,
+      dragon: 0.0472,
+      "super epic": 0.0360,
+      epic: 0.0304,
+      rare: 0.3722,
+      common: 1.2825
+    };
+
+    const cookies = [
+      { name: "용감한 쿠키", image: "images/common/용감한 쿠키.png", grade: "common" },
+      { name: "천사맛 쿠키", image: "images/common/천사맛 쿠키.png", grade: "common" },
+      { name: "근육맛 쿠키", image: "images/common/근육맛 쿠키.png", grade: "common" },
+      { name: "닌자맛 쿠키", image: "images/common/닌자맛 쿠키.png", grade: "common" },
+      { name: "딸기맛 쿠키", image: "images/common/딸기맛 쿠키.png", grade: "common" },
+      { name: "마법사맛 쿠키", image: "images/common/마법사맛 쿠키.png", grade: "common" },
+      { name: "비트맛 쿠키", image: "images/common/비트맛 쿠키.png", grade: "common" },
+      
+      { name: "공주맛 쿠키", image: "images/rare/공주맛 쿠키.png", grade: "rare" },
+      { name: "당근맛 쿠키", image: "images/rare/당근맛 쿠키.png", grade: "rare" },
+      { name: "버블껌맛 쿠키", image: "images/rare/버블껌맛 쿠키.png", grade: "rare" },
+      { name: "블루베리맛 쿠키", image: "images/rare/블루베리맛 쿠키.png", grade: "rare" },
+      { name: "아보카도맛 쿠키", image: "images/rare/아보카도맛 쿠키.png", grade: "rare" },
+      { name: "악마맛 쿠키", image: "images/rare/악마맛 쿠키.png", grade: "rare" },
+      { name: "양파맛 쿠키", image: "images/rare/양파맛 쿠키.png", grade: "rare" },
+      { name: "연금술사맛 쿠키", image: "images/rare/연금술사맛 쿠키.png", grade: "rare" },
+      { name: "용사맛 쿠키", image: "images/rare/용사맛 쿠키.png", grade: "rare" },
+      { name: "체리맛 쿠키", image: "images/rare/체리맛 쿠키.png", grade: "rare" },
+      { name: "커스터드 3세맛 쿠키", image: "images/rare/커스터드 3세맛 쿠키.png", grade: "rare" },
+      { name: "클로버맛 쿠키", image: "images/rare/클로버맛 쿠키.png", grade: "rare" },
+      { name: "탐험가맛 쿠키", image: "images/rare/탐험가맛 쿠키.png", grade: "rare" },
+      { name: "팬케이크맛 쿠키", image: "images/rare/팬케이크맛 쿠키.png", grade: "rare" },
+
+      { name: "감초맛 쿠키", image: "images/epic/감초맛 쿠키.png", grade: "epic" },
+      { name: "검볼다이버맛 쿠키", image: "images/epic/검볼다이버맛 쿠키.png", grade: "epic" },
+      { name: "구름해태맛 쿠키", image: "images/epic/구름해태맛 쿠키.png", grade: "epic" },
+      { name: "구미호맛 쿠키", image: "images/epic/구미호맛 쿠키.png", grade: "epic" },
+      { name: "그린티무스맛 쿠키", image: "images/epic/그린티무스맛 쿠키.png", grade: "epic" },
+      { name: "금계화맛 쿠키", image: "images/epic/금계화맛 쿠키.png", grade: "epic" },
+      { name: "넛맥타이거맛 쿠키", image: "images/epic/넛맥타이거맛 쿠키.png", grade: "epic" },
+      { name: "눈설탕맛 쿠키", image: "images/epic/눈설탕맛 쿠키.png", grade: "epic" },
+      { name: "다크초코 쿠키", image: "images/epic/다크초코 쿠키.png", grade: "epic" },
+      { name: "단계화맛 쿠키", image: "images/epic/단계화맛 쿠키.png", grade: "epic" },
+      { name: "달토끼맛 쿠키", image: "images/epic/달토끼맛 쿠키.png", grade: "epic" },
+      { name: "독버섯맛 쿠키", image: "images/epic/독버섯맛 쿠키.png", grade: "epic" },
+      { name: "딸기크레페맛 쿠키", image: "images/epic/딸기크레페맛 쿠키.png", grade: "epic" },
+      { name: "라떼맛 쿠키", image: "images/epic/라떼맛 쿠키.png", grade: "epic" },
+      { name: "라일락맛 쿠키", image: "images/epic/라일락맛 쿠키.png", grade: "epic" },
+      { name: "라즈베리맛 쿠키", image: "images/epic/라즈베리맛 쿠키.png", grade: "epic" },
+      { name: "락스타맛 쿠키", image: "images/epic/락스타맛 쿠키.png", grade: "epic" },
+      { name: "로얄마가린맛 쿠키", image: "images/epic/로얄마가린맛 쿠키.png", grade: "epic" },
+      { name: "린저 쿠키", image: "images/epic/린저 쿠키.png", grade: "epic" },
+      { name: "마들렌맛 쿠키", image: "images/epic/마들렌맛 쿠키.png", grade: "epic" },
+      { name: "마라맛 쿠키", image: "images/epic/마라맛 쿠키.png", grade: "epic" },
+      { name: "마카롱맛 쿠키", image: "images/epic/마카롱맛 쿠키.png", grade: "epic" },
+      { name: "말차맛 쿠키", image: "images/epic/말차맛 쿠키.png", grade: "epic" },
+      { name: "망고맛 쿠키", image: "images/epic/망고맛 쿠키.png", grade: "epic" },
+      { name: "모짜렐라맛 쿠키", image: "images/epic/모짜렐라맛 쿠키.png", grade: "epic" },
+      { name: "목화맛 쿠키", image: "images/epic/목화맛 쿠키.png", grade: "epic" },
+      { name: "무화과맛 쿠키", image: "images/epic/무화과맛 쿠키.png", grade: "epic" },
+      { name: "민트초코맛 쿠키", image: "images/epic/민트초코맛 쿠키.png", grade: "epic" },
+      { name: "밀키웨이맛 쿠키", image: "images/epic/밀키웨이맛 쿠키.png", grade: "epic" },
+      { name: "바스크치즈맛 쿠키", image: "images/epic/바스크치즈맛 쿠키.png", grade: "epic" },
+      { name: "박하사탕맛 쿠키", image: "images/epic/박하사탕맛 쿠키.png", grade: "epic" },
+      { name: "뱀파이어맛 쿠키", image: "images/epic/뱀파이어맛 쿠키.png", grade: "epic" },
+      { name: "버터롤맛 쿠키", image: "images/epic/버터롤맛 쿠키.png", grade: "epic" },
+      { name: "벚꽃맛 쿠키", image: "images/epic/벚꽃맛 쿠키.png", grade: "epic" },
+      { name: "벨벳케이크맛 쿠키", image: "images/epic/벨벳케이크맛 쿠키.png", grade: "epic" },
+      { name: "별산호맛 쿠키", image: "images/epic/별산호맛 쿠키.png", grade: "epic" },
+      { name: "복사꽃맛 쿠키", image: "images/epic/복사꽃맛 쿠키.png", grade: "epic" },
+      { name: "블랙레모네이드맛 쿠키", image: "images/epic/블랙레모네이드맛 쿠키.png", grade: "epic" },
+      { name: "블랙레이즌맛 쿠키", image: "images/epic/블랙레이즌맛 쿠키.png", grade: "epic" },
+      { name: "블랙사파이어맛 쿠키", image: "images/epic/블랙사파이어맛 쿠키.png", grade: "epic" },
+      { name: "블루파이맛 쿠키", image: "images/epic/블루파이맛 쿠키.png", grade: "epic" },
+      { name: "생토노레맛 쿠키", image: "images/epic/생토노레맛 쿠키.png", grade: "epic" },
+      { name: "샤벳상어맛 쿠키", image: "images/epic/샤벳상어맛 쿠키.png", grade: "epic" },
+      { name: "석류맛 쿠키", image: "images/epic/석류맛 쿠키.png", grade: "epic" },
+      { name: "성게맛 쿠키", image: "images/epic/성게맛 쿠키.png", grade: "epic" },
+      { name: "솔방울맛 쿠키", image: "images/epic/솔방울맛 쿠키.png", grade: "epic" },
+      { name: "수은기사 쿠키", image: "images/epic/수은기사 쿠키.png", grade: "epic" },
+      { name: "슈크림맛 쿠키", image: "images/epic/슈크림맛 쿠키.png", grade: "epic" },
+      { name: "스모크치즈맛 쿠키", image: "images/epic/스모크치즈맛 쿠키.png", grade: "epic" },
+      { name: "스파클링맛 쿠키", image: "images/epic/스파클링맛 쿠키.png", grade: "epic" },
+      { name: "실론나이트 쿠키", image: "images/epic/실론나이트 쿠키.png", grade: "epic" },
+      { name: "아라모드맛 쿠키", image: "images/epic/아라모드맛 쿠키.png", grade: "epic" },
+      { name: "아몬드맛 쿠키", image: "images/epic/아몬드맛 쿠키.png", grade: "epic" },
+      { name: "아포가토맛 쿠키", image: "images/epic/아포가토맛 쿠키.png", grade: "epic" },
+      { name: "에스프레소맛 쿠키", image: "images/epic/에스프레소맛 쿠키.png", grade: "epic" },
+      { name: "에일리언 도넛", image: "images/epic/에일리언 도넛.png", grade: "epic" },
+      { name: "에클레어맛 쿠키", image: "images/epic/에클레어맛 쿠키.png", grade: "epic" },
+      { name: "예언자맛 쿠키", image: "images/epic/예언자맛 쿠키.png", grade: "epic" },
+      { name: "오징어먹물맛 쿠키", image: "images/epic/오징어먹물맛 쿠키.png", grade: "epic" },
+      { name: "옥춘맛 쿠키", image: "images/epic/옥춘맛 쿠키.png", grade: "epic" },
+      { name: "와일드베리맛 쿠키", image: "images/epic/와일드베리맛 쿠키.png", grade: "epic" },
+      { name: "우유맛 쿠키", image: "images/epic/우유맛 쿠키.png", grade: "epic" },
+      { name: "웨어울프맛 쿠키", image: "images/epic/웨어울프맛 쿠키.png", grade: "epic" },
+      { name: "은방울맛 쿠키", image: "images/epic/은방울맛 쿠키.png", grade: "epic" },
+      { name: "음유시인맛 쿠키", image: "images/epic/음유시인맛 쿠키.png", grade: "epic" },
+      { name: "의적맛 쿠키", image: "images/epic/의적맛 쿠키.png", grade: "epic" },
+      { name: "자색고구마맛 쿠키", image: "images/epic/자색고구마맛 쿠키.png", grade: "epic" },
+      { name: "정글전사 쿠키", image: "images/epic/정글전사 쿠키.png", grade: "epic" },
+      { name: "찰스", image: "images/epic/찰스.png", grade: "epic" },
+      { name: "초코드리즐맛 쿠키", image: "images/epic/초코드리즐맛 쿠키.png", grade: "epic" },
+      { name: "칠리맛 쿠키", image: "images/epic/칠리맛 쿠키.png", grade: "epic" },
+      { name: "캔디애플맛 쿠키", image: "images/epic/캔디애플맛 쿠키.png", grade: "epic" },
+      { name: "캡틴캐비어맛 쿠키", image: "images/epic/캡틴캐비어맛 쿠키.png", grade: "epic" },
+      { name: "코코아맛 쿠키", image: "images/epic/코코아맛 쿠키.png", grade: "epic" },
+      { name: "퀸아망맛 쿠키", image: "images/epic/퀸아망맛 쿠키.png", grade: "epic" },
+      { name: "크런치초코칩 쿠키", image: "images/epic/크런치초코칩 쿠키.png", grade: "epic" },
+      { name: "크림 유니콘 쿠키", image: "images/epic/크림 유니콘 쿠키.png", grade: "epic" },
+      { name: "크림브륄레맛 쿠키", image: "images/epic/크림브륄레맛 쿠키.png", grade: "epic" },
+      { name: "타르트타탕맛 쿠키", image: "images/epic/타르트타탕맛 쿠키.png", grade: "epic" },
+      { name: "트위즐젤리맛 쿠키", image: "images/epic/트위즐젤리맛 쿠키.png", grade: "epic" },
+      { name: "파르페맛 쿠키", image: "images/epic/파르페맛 쿠키.png", grade: "epic" },
+      { name: "펌킨파이맛 쿠키", image: "images/epic/펌킨파이맛 쿠키.png", grade: "epic" },
+      { name: "페스츄리맛 쿠키", image: "images/epic/페스츄리맛 쿠키.png", grade: "epic" },
+      { name: "페투치니맛 쿠키", image: "images/epic/페투치니맛 쿠키.png", grade: "epic" },
+      { name: "푸룬주스맛 쿠키", image: "images/epic/푸룬주스맛 쿠키.png", grade: "epic" },
+      { name: "프릴해파리맛 쿠키", image: "images/epic/프릴해파리맛 쿠키.png", grade: "epic" },
+      { name: "허브맛 쿠키", image: "images/epic/허브맛 쿠키.png", grade: "epic" },
+      { name: "호밀맛 쿠키", image: "images/epic/호밀맛 쿠키.png", grade: "epic" },
+      { name: "휘낭시에맛 쿠키", image: "images/epic/휘낭시에맛 쿠키.png", grade: "epic" },
+      { name: "흑당맛 쿠키", image: "images/epic/흑당맛 쿠키.png", grade: "epic" },
+
+      { name: "동백꽃맛 쿠키", image: "images/super epic/동백꽃맛 쿠키.png", grade: "super epic" },
+      { name: "샤이닝글리터맛 쿠키", image: "images/super epic/샤이닝글리터맛 쿠키.png", grade: "super epic" },
+      { name: "소르베맛 쿠키", image: "images/super epic/소르베맛 쿠키.png", grade: "super epic" },
+      { name: "스타더스트 쿠키", image: "images/super epic/스타더스트 쿠키.png", grade: "super epic" },
+      { name: "오이스터맛 쿠키", image: "images/super epic/오이스터맛 쿠키.png", grade: "super epic" },
+      { name: "요정왕 쿠키", image: "images/super epic/요정왕 쿠키.png", grade: "super epic" },
+      { name: "캡사이신맛 쿠키", image: "images/super epic/캡사이신맛 쿠키.png", grade: "super epic" },
+      { name: "크림슨코랄 쿠키", image: "images/super epic/크림슨코랄 쿠키.png", grade: "super epic" },
+      { name: "클로티드 크림 쿠키", image: "images/super epic/클로티드 크림 쿠키.png", grade: "super epic" },
+
+      { name: "뇌신무장 쿠키", image: "images/legendary/뇌신무장 쿠키.png", grade: "legendary" },
+      { name: "달빛술사 쿠키", image: "images/legendary/달빛술사 쿠키.png", grade: "legendary" },
+      { name: "바다요정 쿠키", image: "images/legendary/바다요정 쿠키.png", grade: "legendary" },
+      { name: "바람궁수 쿠키", image: "images/legendary/바람궁수 쿠키.png", grade: "legendary" },
+      { name: "블랙펄 쿠키", image: "images/legendary/블랙펄 쿠키.png", grade: "legendary" },
+      { name: "서리여왕 쿠키", image: "images/legendary/서리여왕 쿠키.png", grade: "legendary" },
+
+      { name: "용과 드래곤 쿠키", image: "images/dragon/용과 드래곤 쿠키.png", grade: "dragon" },
+
+      { name: "골드치즈 쿠키", image: "images/ancient/골드치즈 쿠키.png", grade: "ancient" },
+      { name: "다크카카오 쿠키", image: "images/ancient/다크카카오 쿠키.png", grade: "ancient" },
+      { name: "세인트릴리 쿠키", image: "images/ancient/세인트릴리 쿠키.png", grade: "ancient" },
+      { name: "퓨어바닐라 쿠키", image: "images/ancient/퓨어바닐라 쿠키.png", grade: "ancient" },
+      { name: "홀리베리 쿠키", image: "images/ancient/홀리베리 쿠키.png", grade: "ancient" },
+
+      { name: "미스틱플라워 쿠키", image: "images/beast/미스틱플라워 쿠키.png", grade: "beast" },
+      { name: "버닝스파이스 쿠키", image: "images/beast/버닝스파이스 쿠키.png", grade: "beast" },
+      { name: "쉐도우밀크 쿠키", image: "images/beast/쉐도우밀크 쿠키.png", grade: "beast" },
+      // 추가 쿠키 데이터를 실제 파일 및 등급에 맞게 입력
+    ];
+
+    // 예시 조각(영혼석) 데이터 (image 속성 추가)
+    const fragmentBase = [
+      {
+        name: "커먼 등급 조각",
+        probability: 9.8583333333,
+        quantity: 1,
+        image: "images/piece/용감한 쿠키 조각.png"  // 예시
+      },
+      {
+        name: "커먼 등급 조각",
+        probability: 9.8583333333,
+        quantity: 2,
+        image: "images/piece/용감한 쿠키 조각.png"  // 예시
+      },
+      {
+        name: "커먼 등급 조각",
+        probability: 9.8583333333,
+        quantity: 3,
+        image: "images/piece/용감한 쿠키 조각.png"  // 예시
+      },
+      {
+        name: "레어 등급 조각",
+        probability: 10.9070666667,
+        quantity: 1,
+        image: "images/piece/커스터드 3세맛 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "레어 등급 조각",
+        probability: 10.9070666667,
+        quantity: 2,
+        image: "images/piece/커스터드 3세맛 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "레어 등급 조각",
+        probability: 10.9070666667,
+        quantity: 3,
+        image: "images/piece/커스터드 3세맛 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "에픽 등급 조각",
+        probability: 4.7776,
+        quantity: 1,
+        image: "images/piece/눈설탕맛 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "에픽 등급 조각",
+        probability: 4.7776,
+        quantity: 2,
+        image: "images/piece/눈설탕맛 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "에픽 등급 조각",
+        probability: 4.7776,
+        quantity: 3,
+        image: "images/piece/눈설탕맛 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "슈퍼에픽 등급 조각",
+        probability: 0.6912,
+        quantity: 1,
+        image: "images/piece/요정왕 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "슈퍼에픽 등급 조각",
+        probability: 0.6912,
+        quantity: 2,
+        image: "images/piece/요정왕 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "슈퍼에픽 등급 조각",
+        probability: 0.6912,
+        quantity: 3,
+        image: "images/piece/요정왕 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "골드치즈 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/골드치즈 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "골드치즈 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/골드치즈 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "골드치즈 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/골드치즈 쿠키 조각.png"    // 예시
+      },
+      {
+        name: "뇌신무장 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/뇌신무장 쿠키 조각.png" // 예시
+      },
+      {
+        name: "뇌신무장 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/뇌신무장 쿠키 조각.png" // 예시
+      },
+      {
+        name: "뇌신무장 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/뇌신무장 쿠키 조각.png" // 예시
+      },
+      {
+        name: "다크 카카오 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/다크카카오 쿠키 조각.png"  // 예시
+      },
+      {
+        name: "다크 카카오 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/다크카카오 쿠키 조각.png"  // 예시
+      },
+      {
+        name: "다크 카카오 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/다크카카오 쿠키 조각.png"  // 예시
+      },
+      {
+        name: "달빛술사 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/달빛술사 쿠키 조각.png" // 예시
+      },
+      {
+        name: "달빛술사 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/달빛술사 쿠키 조각.png" // 예시
+      },
+      {
+        name: "달빛술사 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/달빛술사 쿠키 조각.png" // 예시
+      },
+      {
+        name: "미스틱플라워 쿠키 조각",
+        probability: 0.2132,
+        quantity: 1,
+        image: "images/piece/미스틱플라워 쿠키 조각.png" // 예시
+      },
+      {
+        name: "미스틱플라워 쿠키 조각",
+        probability: 0.2132,
+        quantity: 2,
+        image: "images/piece/미스틱플라워 쿠키 조각.png" // 예시
+      },
+      {
+        name: "미스틱플라워 쿠키 조각",
+        probability: 0.2132,
+        quantity: 3,
+        image: "images/piece/미스틱플라워 쿠키 조각.png" // 예시
+      },
+      {
+        name: "바다요정 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/바다요정 쿠키 조각.png" // 예시
+      },
+      {
+        name: "바다요정 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/바다요정 쿠키 조각.png" // 예시
+      },
+      {
+        name: "바다요정 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/바다요정 쿠키 조각.png" // 예시
+      },
+      {
+        name: "바람궁수 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/바람궁수 쿠키 조각.png" // 예시
+      },
+      {
+        name: "바람궁수 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/바람궁수 쿠키 조각.png" // 예시
+      },
+      {
+        name: "바람궁수 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/바람궁수 쿠키 조각.png" // 예시
+      },
+      {
+        name: "블랙펄 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/블랙펄 쿠키 조각.png" // 예시
+      },
+      {
+        name: "블랙펄 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/블랙펄 쿠키 조각.png" // 예시
+      },
+      {
+        name: "블랙펄 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/블랙펄 쿠키 조각.png" // 예시
+      },
+      {
+        name: "서리여왕 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/서리여왕 쿠키 조각.png" // 예시
+      },
+      {
+        name: "서리여왕 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/서리여왕 쿠키 조각.png" // 예시
+      },
+      {
+        name: "서리여왕 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/서리여왕 쿠키 조각.png" // 예시
+      },
+      {
+        name: "세인트릴리 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/세인트릴리 쿠키 조각.png" // 예시
+      },
+      {
+        name: "세인트릴리 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/세인트릴리 쿠키 조각.png" // 예시
+      },
+      {
+        name: "세인트릴리 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/세인트릴리 쿠키 조각.png" // 예시
+      },
+      {
+        name: "쉐도우밀크 쿠키 조각",
+        probability: 0.2132,
+        quantity: 1,
+        image: "images/piece/쉐도우밀크 쿠키 조각.png" // 예시
+      },
+      {
+        name: "쉐도우밀크 쿠키 조각",
+        probability: 0.2132,
+        quantity: 2,
+        image: "images/piece/쉐도우밀크 쿠키 조각.png" // 예시
+      },
+      {
+        name: "쉐도우밀크 쿠키 조각",
+        probability: 0.2132,
+        quantity: 3,
+        image: "images/piece/쉐도우밀크 쿠키 조각.png" // 예시
+      },
+      {
+        name: "용과 드래곤 쿠키 조각",
+        probability: 0.2698,
+        quantity: 1,
+        image: "images/piece/용과 드래곤 쿠키 조각.png" // 예시
+      },
+      {
+        name: "용과 드래곤 쿠키 조각",
+        probability: 0.2698,
+        quantity: 2,
+        image: "images/piece/용과 드래곤 쿠키 조각.png" // 예시
+      },
+      {
+        name: "용과 드래곤 쿠키 조각",
+        probability: 0.2698,
+        quantity: 3,
+        image: "images/piece/용과 드래곤 쿠키 조각.png" // 예시
+      },
+      {
+        name: "버닝스파이스 쿠키 조각",
+        probability: 0.2132,
+        quantity: 1,
+        image: "images/piece/버닝스파이스 쿠키 조각.png" // 예시
+      },
+      {
+        name: "버닝스파이스 쿠키 조각",
+        probability: 0.2132,
+        quantity: 2,
+        image: "images/piece/버닝스파이스 쿠키 조각.png" // 예시
+      },
+      {
+        name: "버닝스파이스 쿠키 조각",
+        probability: 0.2132,
+        quantity: 3,
+        image: "images/piece/버닝스파이스 쿠키 조각.png" // 예시
+      },
+      {
+        name: "각성 골드치즈 쿠키",
+        probability: 0.0371,
+        grade: "ancient",
+        image: "images/piece/각성 골드치즈 쿠키.png" // 예시
+      },
+      {
+        name: "각성 다크카카오 쿠키",
+        probability: 0.0371,
+        grade: "ancient",
+        image: "images/piece/각성 다크카카오 쿠키.png" // 예시
+      },
+    ];
+/***********************************************
+     * 2. 하단 "내 쿠키" 데이터 (초기 상태: 모두 0)
+     ***********************************************/
+    let myCookies = {
+       beast: [
+        { name: "미스틱플라워 쿠키", image: "images/cookie data/미스틱플라워.png", shard: 0, star: 0 },
+        { name: "버닝스파이스 쿠키", image: "images/cookie data/버닝스파이스.png", shard: 0, star: 0 },
+        { name: "쉐도우밀크 쿠키", image: "images/cookie data/쉐도우밀크.png", shard: 0, star: 0 }
+      ],
+      ancient: [
+        { name: "골드치즈 쿠키", image: "images/cookie data/골드치즈.png", shard: 0, star: 0 },
+        { name: "다크카카오 쿠키", image: "images/cookie data/다크카카오.png", shard: 0, star: 0 },
+        { name: "세인트릴리 쿠키", image: "images/cookie data/세인트릴리.png", shard: 0, star: 0 },
+        { name: "퓨어바닐라 쿠키", image: "images/cookie data/퓨어바닐라.png", shard: 0, star: 0 },
+        { name: "홀리베리 쿠키", image: "images/cookie data/홀리베리.png", shard: 0, star: 0 }
+      ],
+      dragon: [
+        { name: "용과 드래곤 쿠키", image: "images/cookie data/용과 드래곤.png", shard: 0, star: 0 }
+      ],
+      legendary: [
+        { name: "뇌신무장 쿠키", image: "images/cookie data/뇌신무장.png", shard: 0, star: 0 },
+        { name: "달빛술사 쿠키", image: "images/cookie data/달빛술사.png", shard: 0, star: 0 },
+        { name: "바다요정 쿠키", image: "images/cookie data/바다요정.png", shard: 0, star: 0 },
+        { name: "바람궁수 쿠키", image: "images/cookie data/바람궁수.png", shard: 0, star: 0 },
+        { name: "블랙펄 쿠키", image: "images/cookie data/블랙펄.png", shard: 0, star: 0 },
+        { name: "서리여왕 쿠키", image: "images/cookie data/서리여왕.png", shard: 0, star: 0 }
+      ]
+    };
+
+    // 로컬스토리지에서 내 쿠키 데이터 불러오기
+    function loadMyCookies() {
+      let stored = localStorage.getItem("myCookies");
+      if (stored) { myCookies = JSON.parse(stored); }
+    }
+    function saveMyCookies() {
+      localStorage.setItem("myCookies", JSON.stringify(myCookies));
+    }
+    loadMyCookies();
+
+    /***********************************************
+     * 3. 뽑기 로직: 통합 풀 생성 및 무작위 선택
+     ***********************************************/
+    let integratedPool = [];
+    function buildPool() {
+      integratedPool = [];
+      cookies.forEach(cookie => {
+        integratedPool.push({
+          type: 'cookie',
+          name: cookie.name,
+          image: cookie.image,
+          grade: cookie.grade,
+          weight: gradeProbabilities[cookie.grade] || 0
+        });
+      });
+      fragmentBase.forEach(fragment => {
+        integratedPool.push({
+          type: 'fragment',
+          name: fragment.name,
+          quantity: fragment.quantity,
+          weight: fragment.probability,
+          image: fragment.image || "",
+          target: fragment.target
+        });
+      });
+    }
+    buildPool();
+
+    function getRandomOutcome() {
+      const totalWeight = integratedPool.reduce((sum, item) => sum + item.weight, 0);
+      const random = Math.random() * totalWeight;
+      let cumulative = 0;
+      for (let i = 0; i < integratedPool.length; i++) {
+        cumulative += integratedPool[i].weight;
+        if (random < cumulative) return integratedPool[i];
+      }
+    }
+
+    /***********************************************
+     * 4. 로컬스토리지로 다이아 누적 (단 한 번만 선언)
+     ***********************************************/
+    let usedDiamonds = parseInt(localStorage.getItem('usedDiamonds')) || 0;
+    const diamondCountEl = document.getElementById('diamondCount');
+    diamondCountEl.innerText = usedDiamonds;
+
+    /***********************************************
+     * 5. 확률 보기 팝업 이벤트
+     ***********************************************/
+    const probPopup = document.getElementById('probPopup');
+    const probCloseBtn = document.getElementById('probCloseBtn');
+    document.getElementById('showProbBtn').addEventListener('click', () => {
+      probPopup.classList.add('show');
+    });
+    probCloseBtn.addEventListener('click', () => {
+      probPopup.classList.remove('show');
+    });
+
+    /***********************************************
+     * 6. 에픽 이상 쿠키 팝업 (동적 생성)
+     ***********************************************/
+    let popupZIndex = 1000;
+    function createEpicPopup(outcome) {
+      const overlay = document.createElement('div');
+      overlay.className = 'epic-popup-overlay show';
+      overlay.style.zIndex = popupZIndex;
+      popupZIndex++;
+      const content = document.createElement('div');
+      content.className = 'epic-popup-content';
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'epic-popup-close';
+      closeBtn.innerText = '×';
+      closeBtn.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+      });
+      const cookieImg = document.createElement('img');
+      cookieImg.className = 'epic-cookie-img';
+      cookieImg.src = outcome.image;
+      cookieImg.alt = outcome.name;
+      const cookieName = document.createElement('div');
+      cookieName.className = 'epic-cookie-name';
+      cookieName.innerText = `${outcome.name}을(를) 획득했습니다!`;
+      const diamondText = document.createElement('div');
+      diamondText.className = 'epic-diamond-text';
+      diamondText.innerHTML = `지금까지 사용한 크리스탈은 <strong>${usedDiamonds}</strong> 개입니다.`;
+      content.appendChild(closeBtn);
+      content.appendChild(cookieImg);
+      content.appendChild(cookieName);
+      content.appendChild(diamondText);
+      overlay.appendChild(content);
+      document.body.appendChild(overlay);
+    }
+
+    /***********************************************
+     * 7. 뽑기 함수
+     ***********************************************/
+    const resultsContainer = document.getElementById('results');
+    function drawGacha(count) {
+      usedDiamonds += count * 300;
+      localStorage.setItem('usedDiamonds', usedDiamonds);
+      diamondCountEl.innerText = usedDiamonds;
+      resultsContainer.innerHTML = '';
+      let outcomes = [];
+      for (let i = 0; i < count; i++) { outcomes.push(getRandomOutcome()); }
+      outcomes.forEach((outcome) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'result-item';
+        if (outcome.type === 'cookie') {
+          const img = document.createElement('img');
+          img.className = 'item-image';
+          img.src = outcome.image;
+          img.alt = outcome.name;
+          const nameDiv = document.createElement('div');
+          nameDiv.className = 'item-name';
+          nameDiv.innerText = outcome.name;
+          const gradeImg = document.createElement('img');
+          gradeImg.className = 'item-grade';
+          gradeImg.src = `images/level/${outcome.grade}.png`;
+          gradeImg.alt = outcome.grade;
+          const borderColors = {
+            epic: "#FFC0CB",
+            "super epic": "#D8BFD8",
+            legendary: "#87CEEB",
+            dragon: "#FFA07A",
+            ancient: "#800080",
+            beast: "#FF0000"
+          };
+          if (borderColors[outcome.grade]) { itemDiv.style.borderColor = borderColors[outcome.grade]; }
+          itemDiv.appendChild(img);
+          itemDiv.appendChild(nameDiv);
+          itemDiv.appendChild(gradeImg);
+          const epicGrades = ["epic", "super epic", "legendary", "dragon", "ancient", "beast"];
+          if (epicGrades.includes(outcome.grade)) { createEpicPopup(outcome); }
+        } else {
+          if (outcome.image) {
+            const fragImg = document.createElement('img');
+            fragImg.className = 'fragment-image';
+            fragImg.src = outcome.image;
+            fragImg.alt = outcome.name;
+            itemDiv.appendChild(fragImg);
+          }
+          const textDiv = document.createElement('div');
+          textDiv.className = 'fragment-text';
+          textDiv.innerText = outcome.name;
+          const qtyDiv = document.createElement('div');
+          qtyDiv.className = 'fragment-qty';
+          qtyDiv.innerText = `수량: ${outcome.quantity}개`;
+          itemDiv.appendChild(textDiv);
+          itemDiv.appendChild(qtyDiv);
+          if (outcome.target) { updateCookieShards(outcome.target, outcome.quantity); }
+        }
+        resultsContainer.appendChild(itemDiv);
+      });
+      if (count % 2 !== 0) {
+        const lastItem = resultsContainer.lastElementChild;
+        lastItem.style.gridColumn = "1 / span 2";
+      }
+      updateMyCookies();
+    }
+
+    /***********************************************
+     * 8. 조각 업데이트: 해당 쿠키에만 조각 누적
+     ***********************************************/
+    function updateCookieShards(targetId, quantity) {
+      for (let grade in myCookies) {
+        myCookies[grade].forEach(cookie => {
+          if (cookie.id === targetId) {
+            cookie.shard += quantity;
+            if (cookie.grade === "beast") {
+              cookie.star = getStarLevelForBeast(cookie.shard);
+            } else {
+              cookie.star = getStarLevelForNormal(cookie.shard);
+            }
+          }
+        });
+      }
+    }
+
+    /***********************************************
+     * 9. 초기화 버튼 이벤트: 상단 결과, 다이아, 내 쿠키 데이터, 풀 재빌드
+     ***********************************************/
+    document.getElementById('resetDiamonds').addEventListener('click', () => {
+      usedDiamonds = 0;
+      localStorage.removeItem('usedDiamonds');
+      diamondCountEl.innerText = usedDiamonds;
+      resultsContainer.innerHTML = '';
+      // 내 쿠키 초기화
+      myCookies.beast.forEach(c => { c.shard = 0; c.star = 0; });
+      myCookies.ancient.forEach(c => { c.shard = 0; c.star = 0; });
+      myCookies.dragon.forEach(c => { c.shard = 0; c.star = 0; });
+      myCookies.legendary.forEach(c => { c.shard = 0; c.star = 0; });
+      localStorage.removeItem("myCookies");
+      updateMyCookies();
+      buildPool();
+    });
+
+    /***********************************************
+     * 10. 뽑기 버튼 이벤트
+     ***********************************************/
+    document.getElementById('drawOnce').addEventListener('click', () => { drawGacha(1); });
+    document.getElementById('drawTen').addEventListener('click', () => { drawGacha(10); });
+
+    /***********************************************
+     * 11. 페이지 로드 시 내 쿠키 영역 업데이트
+     ***********************************************/
+    updateMyCookies();
+  </script>
+</body>
+</html>
